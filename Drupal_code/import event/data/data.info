@@ -1,0 +1,5 @@
+name = Data import and export
+description  = data import and export from excel sheet
+version = 7.x
+core = 7.x
+package = customs

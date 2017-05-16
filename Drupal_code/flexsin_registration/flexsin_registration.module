@@ -1,0 +1,145 @@
+<?php
+
+drupal_add_js(drupal_get_path('module','flexsin_registration').'/custom.js');
+
+function flexsin_registration_menu(){
+    $items['student/Registration'] = array(
+      'title' => 'Student Registration',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('student_registration'),
+      'access callback' => TRUE,  
+    );
+    $items['formtest'] = array(
+    'title' => 'Form Test',
+    'page callback' => 'get_form',
+    //'page arguments' => array('student_registration'),
+    'access callback' => TRUE,
+    );
+    return $items;
+}
+
+function get_form(){
+    $output = t('skfjsakljfdkjsakljfksa');
+    return $output;
+}
+
+function _validate_name($form, $form_state) {
+
+    if ($form_state['values']['reg_id'] != '') {
+    $output = 'OK';
+    }
+    else {
+      $output = 'Enter a value';
+    }
+
+   return $output;
+
+}
+
+function student_registration($form,&$form_state){
+   
+    $form['reg_id'] = array(
+    '#title' => t('Registration Id'),
+    '#type' => 'textfield',
+    '#description' => t('Please Enter your unique registration id.'),    
+    '#required' => TRUE,
+    '#prefix' => '<div id="listserv-subscribe-form">',
+    '#suffix' => '</div>',   
+    );
+   
+    $form['fname'] = array(
+    '#title' => t('First Name'),
+    '#type' => 'textfield',
+    '#description' => t('Please Enter your First Name.'),    
+    '#required' => TRUE,
+    );
+    $form['lname'] = array(
+    '#title' => t('Last Name'),
+    '#type' => 'textfield',
+    '#description' => t('Please Enter your Last Name.'),    
+    '#required' => TRUE,
+    );
+    
+    $form['phone'] = array(
+    '#title' => t('Phone No'),
+    '#type' => 'textfield',
+    '#description' => t('Please Enter your Phone No.'),    
+    '#required' => TRUE,
+    );
+    
+    $form['email'] = array(
+    '#title' => t('Email'),
+    '#type' => 'textfield',
+    '#description' => t('Please Enter your Email.'),    
+    '#required' => TRUE,    
+    );
+    
+    $form['message'] = array(
+    '#title' => t('Message'),
+    '#type' => 'textarea',
+    '#description' => t('Please Type your Message.'),    
+    '#rows' => 3,
+    '#required' => TRUE,    
+    );
+    
+//    $form['box'] = array(
+//    '#type' => 'markup',
+//    '#prefix' => '<div id="listserv-subscribe-form">',
+//    '#suffix' => '</div>',
+//    '#markup' => '<h1>Initial markup for box</h1>',
+//  );
+   
+    $form['submit'] = array(
+    '#type' => 'submit',
+//    '#ajax' => array(
+//      'callback' => 'ajax_example_submit_driven_callback',
+//      //'wrapper' => 'box',
+//    ),
+    '#value' => t('Submit'),
+  );
+  return $form;
+}
+
+/**
+ * Impliments hook_form_FORMID_alter.
+ */
+function flexsin_registration_form_student_registration_alter(&$form, &$form_state, $form_id) {
+  $form['submit']['#ajax'] = array(
+    'callback' => 'heymp_ajax_listserv_subscribe_callback',
+    'wrapper' => 'listserv-subscribe-form',
+  );
+}
+
+function heymp_ajax_listserv_subscribe_callback($form, &$form_state) {
+    //print_r(form_get_errors());
+ if (form_get_errors()) {
+    $form_state['rebuild'] = TRUE;
+  	$commands = array();
+  	//$commands[] = ajax_command_html(NULL, theme('status_messages'));
+        $commands[] = ajax_command_invoke(NULL, "error_function", array(form_get_errors()));
+    return array('#type' => 'ajax', '#commands' => $commands);
+     
+ } 
+  else {
+    $system_message = drupal_get_messages();
+    return t('Thank you for your submission!');
+  }
+}
+
+function ajax_example_submit_driven_callback($form, $form_state) {
+  // In most cases, it is recommended that you put this logic in form generation
+  // rather than the callback. Submit driven forms are an exception, because
+  // you may not want to return the form at all.
+  //$element = $form['box'];
+  $element['#markup'] = "Clicked submit";
+  return $element;
+}
+
+function student_registration_validate($form,&$form_state){
+    $val_email = $form_state['values']['email'];
+    if(!valid_email_address($val_email)){
+        form_set_error('email' ,t('Please enter valid email id'));
+    }
+    //drupal_set_message(''.print_r($form_state['values'],TRUE).'');
+    
+}

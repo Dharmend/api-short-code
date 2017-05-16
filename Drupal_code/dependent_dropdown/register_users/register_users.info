@@ -1,0 +1,7 @@
+name = register user and other user related operations
+description  = register user and other user related operations
+version = 7.x
+core = 7.x
+package = customs
+
+scripts[] = reg_user.js

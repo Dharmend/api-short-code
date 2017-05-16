@@ -1,0 +1,116 @@
+<?php
+
+//function flexsin_registration_install() {
+//    drupal_install_schema('student_registration');
+//}
+//
+//
+//function flexsin_registration_uninstall() {
+//    drupal_uninstall_schema('student_registration');
+//}
+
+function flexsin_registration_schema() {
+//$schema['student'] = array(
+//'fields' => array(
+//      'sid' => array(
+//      'type' => 'int',
+//      'not null' => TRUE,
+//      'default' => 0,
+//      'description' => t('The student id of the user.')
+//      ),
+//      'first_name' => array(
+//        'description' => 'First name',
+//        'type' => 'varchar',
+//        'length' => 100,
+//        'not null' => TRUE
+//        ),
+//      'last_name' => array(
+//        'description' => 'Last Name.',
+//        'type' => 'varchar',
+//        'length' => 100,
+//        'not null' => TRUE,
+//        'default' => ''
+//         ),
+//    'phone' => array(
+//        'description' => 'Phone no.',
+//        'type' => 'varchar',
+//        'length' => 100,
+//        'not null' => TRUE,
+//        'default' => ''
+//        ),
+//    'email' => array(
+//        'description' => 'Email.',
+//        'type' => 'varchar',
+//        'length' => 100,
+//        'not null' => TRUE,
+//        'default' => ''
+//        ),
+////    'message' => array(
+////        'description' => 'Message.',
+////        'type' => 'BLOB',
+////        //'length' => 100,
+////        'not null' => TRUE,
+////        'default' => ''
+////        ),
+//      'description'    => array(
+//      'description' => 'Student Registration data',
+//      'type' => 'text',
+//      'not null' => TRUE,
+//      'size' => 'medium'),
+//    ),
+//    'primary key' => array('sid'),
+//    ),
+    
+    
+   $schema['student_registration'] = array(
+
+                'description' => 'Student registration table',
+
+                    'fields' => array(
+                        'sid'=> array(
+                            'description' => 'Student id',
+                            'type' => 'serial',
+                            'not null' => TRUE,
+                            'unsigned' => TRUE,
+                        ),
+                         'first_name' => array(
+                         'description' => 'First name of the student',
+                         'type' => 'varchar',
+                         'length' => 100,
+                         'not null' => TRUE
+                        ),
+                        'last_name' => array(
+                         'description' => 'Last name of the student',
+                         'type' => 'varchar',
+                         'length' => 100,
+                         'not null' => TRUE
+                        ),
+                        'phone_no' => array(
+                         'description' => 'phone no of the student',
+                         'type' => 'varchar',
+                         'length' => 100,
+                         'not null' => TRUE
+                        ),
+                        'email' => array(
+                         'description' => 'Email of the student',
+                         'type' => 'varchar',
+                         'length' => 100,
+                         'not null' => TRUE
+                        ),
+                        'message' => array(
+                         'description' => 'message',
+                         'type' => 'text',
+                         'size' => 'big',
+                         'not null' => TRUE
+                        ),
+                        
+                    ),
+
+                'primary key' => array('sid'),
+            );
+
+            return $schema;
+
+        }
+
+

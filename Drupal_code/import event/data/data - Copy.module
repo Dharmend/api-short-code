@@ -1,0 +1,475 @@
+<?php
+
+function data_menu() {
+
+  $items = array();
+  $items['data/import'] = array(
+    'title' => 'Data import',
+    'page callback' => 'drupal_get_form', //drupal_get_form
+    'page arguments' => array('create_event_form'),
+    'access arguments' => array('import excel file'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  return $items;
+}
+
+
+function data_permission() {
+  return array(
+    'import excel file' => array(
+      'title' => t('Import event excel file'),
+      'description' => t('Import live event'),
+    ),
+  );
+}
+
+
+
+function create_event_form($form, &$form_state){
+    
+   $city = city_list();
+   $city_selected = isset($form_state['values']['city_dropdown']) ? $form_state['values']['city_dropdown'] : key($city);
+   
+   $form['city_dropdown'] = array(
+    '#type' => 'select',
+    '#title' => 'City',
+    '#options' => $city,
+    '#weight' => 5,
+    '#default_value' => $city_selected,
+    '#required' => TRUE,
+    '#ajax' => array(
+      'callback' => 'city_org_dropdown_callback',
+      'wrapper' => 'dropdown-second-replace',
+    ),
+  );
+
+  $form['organization_dropdown'] = array(
+    '#type' => 'select',
+    '#title' => 'Organization',
+    '#weight' => 8,
+    '#required' => TRUE, 
+    '#prefix' => '<div id="dropdown-second-replace">',
+    '#suffix' => '</div>',
+    '#options' => city_organization_lists($city_selected),
+    //'#default_value' => isset($form_state['values']['dropdown_second']) ? $form_state['values']['dropdown_second'] : $event_node->field_event_subcategory['und'][0]['value'],
+    '#default_value' => isset($form_state['values']['organization_dropdown']) ? $form_state['values']['organization_dropdown'] : '',  
+  ); 
+    
+  $form['picture']['profile'] = array(
+    '#type' => 'file',
+    '#weight' => 10,
+    '#element_validate' => array('validate_security_check'),
+    '#title' => t('Import Event')
+  );
+  
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#weight' => 11,  
+    '#value' => t('Submit'),
+  );
+
+  return $form;
+}
+
+
+function validate_security_check($element, &$form_state){
+    
+    //drupal_set_message('<pre>'.print_r($file,TRUE).'</pre>');
+    
+    //form_set_error($element, t('checking please wait....'));
+
+     //if (!empty($element['#value']) && !is_numeric(parse_size($element['#value']))) {
+     //form_error($element, t('The "!name" option must contain a valid value. You may either leave the text field empty or enter a string like "512" (bytes), "80 KB" (kilobytes) or "50 MB" (megabytes).', array('!name' => t($element['title']))));
+}
+
+
+
+function create_event_form_validate($form, &$form_state){
+
+  session_start();
+
+  $file = file_save_upload('profile', array(
+      //'file_validate_is_image' => array(),
+      'file_validate_extensions' => array('xlsx','xls'),
+  ));
+  
+    $_SESSION['excel_fid'] = $file->fid;
+    
+    $finfo = finfo_open(FILEINFO_MIME);
+    echo $uploaded_file_mimetype = finfo_file($finfo, $file->uri);
+    
+    
+    
+    if($uploaded_file_mimetype != false)
+    {
+        //Get the Proper MIME TYPE
+        if(strpos($uploaded_file_mimetype, ';') != false)
+        {
+            $mime_type = strtolower(substr($uploaded_file_mimetype, 0, strpos($uploaded_file_mimetype, ';')));
+        }
+        else
+        {    
+            $mime_type = strtolower($uploaded_file_mimetype);
+        }
+        
+        drupal_set_message('mime type is'.$mime_type.'');
+        
+        //GET The Defined MIME TYPES Array and Search for Extension.
+        $mimeArray = file_default_mimetype_mapping();
+        drupal_set_message('mimearray'.print_r($mimeArray,TRUE).'');
+        $getExtension = array_search($mime_type, $mimeArray['mimetypes']);
+        //drupal_set_message('getextension'.$getExtension.'');
+        if($getExtension != false)
+        {   
+            drupal_set_message('mime type extension'.print_r($mimeArray['extensions'], TRUE).'');
+            
+            $uploaded_file_extension = array_search($getExtension, $mimeArray['extensions']);
+            drupal_set_message('Uploaded file ectension'.$uploaded_file_extension.'');
+            drupal_set_message('Allowed extension'.print_r($allowed_extension,TRUE).'');
+            
+            //$excel_file_formats = 
+            $new_extensions = array();
+            
+            $allowed_extension = array('xlsx','xls');
+             
+            if(!in_array($uploaded_file_extension, $allowed_extension))
+            {
+                //$errors[] = t("Hey ! Please upload valid file.");
+                form_set_error('profile',t('Please upload valid file extension'));
+            }
+        }
+        else
+        {    
+            //$errors[] = t("file is wrong Please upload valid file.");
+             form_set_error('profile',t('This file is wrong please upload right file'));
+        }
+    }
+    
+    drupal_set_message('<pre>'.print_r($errors,TRUE).'</pre>');
+    
+        
+ drupal_set_message('<pre>'.print_r($file,TRUE).'</pre>');       
+  if ($file) {
+    if ($file = file_move($file, 'public://excel')) {
+      $form_state['values']['profile'] = $file;
+    }
+    else {
+      form_set_error('profile', t('Failed to write the uploaded file the site\'s file folder.'));
+    }
+  }
+  else {
+    form_set_error('profile', t('No file was uploaded.'));
+  }
+ 
+}
+
+
+
+function city_list(){
+    //SELECT nid,title FROM `node` where type = 'city'
+    
+    $all_city = array();
+    $select = db_query("SELECT nid,title FROM `node` where type = 'city'");
+
+
+    $all_city['_none'] = t('- None -');
+
+
+    foreach ($select as $node) {
+            $all_city[$node->nid] = $node->title;
+    }
+    
+    return $all_city;
+}
+
+
+function city_organization_lists($city){
+    $all_org = array();
+
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_organization_city} as c
+inner join node as n on n.nid = c.entity_id where field_organization_city_nid = :city", array(':city' => $city));
+
+
+    $all_org['_none'] = t('- None -');
+
+
+    foreach ($select as $node) {
+            $all_org[$node->nid] = $node->title;
+    }
+    
+    return $all_org;
+}
+
+function city_org_dropdown_callback($form, $form_state) {
+  return $form['organization_dropdown'];
+}
+
+
+function create_event_form_submit($form, &$form_state){
+  global $user;
+//  $city =  $form_state['values']['city_dropdown'];
+//  $organization =  $form_state['values']['organization_dropdown'];
+//  $excel_file = $form_state['values']['profile'];
+//  
+//  //print_r($excel_file);
+//  
+//  drupal_exit();
+//  
+//  $file_id = $_SESSION['excel_fid'];
+//    
+//  module_load_include('inc', 'phpexcel');
+//  //$path = 'sites/default/files/data.xlsx';
+//
+// $db_query = db_select('file_managed','f')
+//        ->fields('f',array('uri'))
+//        ->condition('f.fid', $file_id)
+//        ->execute();
+//
+//foreach ($db_query as $dq){
+//    $file_uri = $dq->uri;
+//}
+//$aa = explode("/",$file_uri);
+////echo $aa[3];
+//
+//$path = 'sites/default/files/excel/'.$aa[3];
+//  
+//  $result = phpexcel_import($path);
+//  if (is_array($result)) {
+//     //save data in database
+// 
+//  //drupal_set_message('<pre>'.print_r($result,TRUE).'</pre>');
+// 
+//      foreach ($result as $re){
+//                foreach ($re as $rec){
+//                    if($rec['Event Name'] != ''){
+//                       $update_user = array();
+//                        
+//                        $newNode = (object) NULL;
+//                        $newNode->type = 'event_calendar';
+//                        $newNode->title = $rec['Event Name'];
+//                        $newNode->uid = $user->uid;
+//                        //Add language code
+//                        $find_key = array_search($rec['Language'],locale_language_list());
+//                        $language_code = isset($find_key) ? $find_key : 'en';
+//                        
+//                        $newNode->language = $language_code;
+//                        $newNode->created = strtotime("now");
+//                        $newNode->changed = strtotime("now");
+//                        $newNode->status = 1;
+//                        $newNode->comment = 0;
+//                        $newNode->promote = 0;
+//                        $newNode->moderate = 0;
+//                        $newNode->sticky = 0;
+//                        // add CCK field data
+//                        $newNode->event_calendar_status['und'][0]['tid'] = 2;
+//                        $newNode->field_event_city['und'][0]['nid'] = $city;
+//                        $newNode->field_event_organization['und'][0]['nid'] = $organization;
+//                        $newNode->field_event_category['und'][0]['value'] = $rec['Event Category'];// not working
+//                        $newNode->field_event_subcategory['und'][0]['nid'] = get_nid($rec['Event Sub Category']); //not working
+//                        
+//                        $persons = $rec['Person Name'];
+//                        $whom_users = explode(',', $persons);
+//                        $set_user = array();
+//                        $type = $rec['By Whom'];
+//                        foreach ($whom_users as $wuser){
+//
+//                                $set_user['field_by']['und'][0]['value'] = $type;
+//                                $set_user['field_name_of_person']['und'][0]['value'] = $wuser;
+//                                $update_user[] = $set_user;
+//                        }
+//                        $newNode->field_person_type['und'] = $update_user;
+//                        
+//                         if($rec['End Date'] != ''){
+//                          
+//                        
+////                      $from_date1 = date('Y-m-d H:i:s', strtotime(str_replace("/","-", $rec['Start Date'])));
+////                      $from_date2 = date('Y-m-d H:i:s', strtotime(str_replace("/","-", $rec['End Date']))); 
+//                             
+//                             
+//                        $unix_date1 = ($rec['Start Date'] - 25569) * 86400;
+//                        $from_date1 = gmdate("Y-m-d H:i:s", $unix_date1);
+//
+//                        $unix_date2 = ($rec['End Date'] - 25569) * 86400;
+//                        $from_date2 = gmdate("Y-m-d H:i:s", $unix_date2);
+//                        
+//                             
+//                        $newNode->field_event_schedule['und'][0]['value'] = 'Regular Schedule';
+//                        $newNode->event_calendar_date['und'][0]['value'] = $from_date1;
+//                        $newNode->event_calendar_date['und'][0]['value2'] = $from_date2;
+//                            
+//                        }else{
+//                             //custom schedule
+//                            $UNIX_DATE1 = ($rec['Start Date'] - 25569) * 86400;
+//                            $from_date1 = gmdate("Y-m-d H:i:s", $UNIX_DATE1);
+//
+//                            //$from_date1 = date('Y-m-d H:i:s', strtotime(str_replace("/","-", $rec['Start Date'])));
+//                              
+//                            $newNode->field_event_schedule['und'][0]['value'] = 'Custom Schedule';
+//                            $newNode->field_custom_schedule['und'][0]['value'] = $from_date1;
+//                             
+//                         }
+//                         //contact no
+//                         $newNode->field_contact_number['und'][0]['value'] = $rec['Contact Number'];
+//                         //venue 
+//                         $newNode->field_venue['und'][0]['value'] = $rec['Event Venue'];
+//                         
+////                       //pin code
+//                         //get lat long of the script 
+//                          $address = str_replace(' ','+',$rec['Event Venue']); 
+//                          $result = get_lat_long($address);
+//                         
+//                          $newNode->field_map_address['und'][0]['lat'] = ($result['lat'] != '') ? $result['lat'] : '28.635308';
+//                          $newNode->field_map_address['und'][0]['lng'] = ($result['lang'] != '') ? $result['lang'] : '77.224960';
+//                          
+//                          $new_venue = $rec['Event Venue'].' '.$rec['PIN Code'].'';
+//                        
+//                        // Add assign time on the event  
+//                        $from_time = $rec['Start Time'];
+//                        $to_time = $rec['End Time'];
+//                        
+//                        $from_time_array = explode('|',$from_time);
+//                        $to_time_array = explode('|',$to_time);
+//                        $final = array_combine($from_time_array, $to_time_array);
+//
+//                        $time_array = array();
+//                        $time_array2 = array();
+//                        
+//
+//                        foreach($final as $k => $v){
+//
+//                            if($k != '' && $v != ''){
+//                                $sep_time1 = explode(':',$k);
+//                                $sep_time2 = explode(':',$v);
+//
+//                                $time_array['field_event_start_time']['und'][0]['value'] = $sep_time1[0];
+//                                $time_array['field_event_start_minutes']['und'][0]['value'] = $sep_time1[1];
+//
+//                                $time_array['field_event_end_time_hr']['und'][0]['value'] = $sep_time2[0];
+//                                $time_array['field_enent_end_time_minuetes']['und'][0]['value'] = $sep_time2[1];
+//
+//                                $time_array2[] = $time_array;
+//                            }
+//                        }
+//
+//                        //print_r($time_array2); 
+//                        
+//                        $newNode->field_time['und'] = $time_array2;  
+//                        //end of the time code  
+//                       if($rec['Entry Type'] == 'Free'){
+//                            
+//                        $newNode->field_fee_india['und'][0]['value'] = '';
+//                        $newNode->field_fee_foreign['und'][0]['value'] = '';
+//                        
+//                        
+//                        }elseif ($rec['Entry Type'] == 'paid') {
+//                            
+//                        $newNode->field_fee_india['und'][0]['value'] = $rec['Indian Citizen Fee'];
+//                        $newNode->field_fee_foreign['und'][0]['value'] = $rec['Foreign Citizen Fee'];
+//                            
+//                        }
+//                        
+//                        $newNode->field_entry_criteria['und'][0]['value'] = $rec['Event Entry Criteria'];
+//                        $newNode->body['und'][0]['value'] = $rec['Event Details'];
+//                        // save node
+//                        $new_event = node_save($newNode);
+//                        
+//                        
+//                        
+//                            $data1 = db_update('field_data_field_venue')
+//                            ->fields(array(
+//                                'field_venue_value' => $new_venue
+//                            ))
+//                            ->condition('entity_id',$newNode->nid)
+//                            ->execute();
+//
+//
+//                            $data2 = db_update('field_revision_field_venue')
+//                            ->fields(array(
+//                                'field_venue_value' => $new_venue
+//                            ))
+//                            ->condition('entity_id',$newNode->nid)
+//                            ->execute();
+//                        
+//                        
+//                        
+//                         $new_dir = 'event_'.$newNode->nid;
+//                         drupal_mkdir('public://events/' . $new_dir . '/');
+//
+//                        //drupal_set_message('<pre>'.$rec['Event Category'].'</pre>');
+//                    }else{
+//                        //drupal_set_message('Event name not found');
+//                    }
+//                }
+//      }
+//    
+//  }
+//  else {
+//    drupal_set_message(t("Oops ! An error occured !"), 'error');
+//  }
+}
+
+function get_nid($title){
+    
+//get  nid from title
+ 
+    $qry = db_select('node','n')
+            ->fields('n',array('nid'))
+            ->condition('n.title',$title)
+            ->condition('n.type','event_subcategory')
+            ->execute();
+
+if($qry->rowCount() >0){
+    
+    foreach ($qry as $qr){
+        $subcat_nid = $qr->nid;
+    }
+    
+}else{
+    $subcat_nid = '54';//other category
+}
+
+return $subcat_nid;
+
+
+}
+
+function get_lat_long($address){
+
+        $url = "http://maps.google.com/maps/api/geocode/json?address=$address&sensor=false&region=India";
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_PROXYPORT, 3128);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        $response_a = json_decode($response);
+        $lat_long = array();
+
+        $lat_long['lat'] = $response_a->results[0]->geometry->location->lat;
+        $lat_long['lang'] = $response_a->results[0]->geometry->location->lng;
+
+        return $lat_long;
+
+}
+
+
+
+//function data_import_stuff() {
+//  module_load_include('inc', 'phpexcel');
+//  include_once('http://localhost/drupal728/sites/all/libraries/PHPExcel');
+//  // The path to the excel file
+//  $path = 'sites/default/files/data.xlsx';
+//  $result = phpexcel_import($path);
+//  if (is_array($result)) {
+//  
+//	//print_r($result);
+//    drupal_set_message(t("We did it !"));
+//  }
+//  else {
+//    drupal_set_message(t("Oops ! An error occured !"), 'error');
+//  }
+//}

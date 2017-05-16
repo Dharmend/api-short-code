@@ -1,0 +1,369 @@
+<?php
+
+//drupal_add_js(drupal_get_path("module","register_users") . "/reg_user.js");
+
+//echo arg(2);
+
+function register_users_menu() {
+  	$items = array();
+ 
+	$items['user/org_list/%'] = array(
+                'title' => t('Organisation Listing'),
+                'description'=>t('Organisation Listing'),  
+    		'page callback' => 'organization_lists_responce',
+                #'page arguments' => arg(2),
+    		'access callback' => 'user_is_logged_in',
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+        
+         $items['event/org_list/%'] = array(
+                'title' => t('Event org listing'),
+                'description'=>t('Event Org Listing'),  
+    	        'page callback' => 'adder',
+        	'access callback' => TRUE,
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+         
+         $items['manage_event/org_list/%'] = array(
+                'title' => t('Manage Event org listing'),
+                'description'=>t('Manage Event Org Listing'),  
+    	        'page callback' => 'manage_event_org_listing',
+        	'access callback' => TRUE,
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+         
+        $items['manage_event/subcat_list/%'] = array(
+                'title' => t('Manage Event subcat listing'),
+                'description'=>t('Manage Event subcat Listing'),  
+    	        'page callback' => 'manage_event_subcat_listing',
+        	'access callback' => TRUE,
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+        
+        $items['add_event/subcat_list/%'] = array(
+                'title' => t('Add Event subcat listing'),
+                'description'=>t('Add Event subcat Listing'),  
+    	        'page callback' => 'add_event_subcat_listing',
+        	'access callback' => TRUE,
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+        
+        $items['event/edit/%'] = array(
+                'title' => t('edit event details'),
+                'description'=>t('Edited event details'),  
+    	        'page callback' => 'edit_event_details',
+        	'access callback' => TRUE,
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+        
+        $items['user/load/%'] = array(
+                'title' => t('edit user details'),
+                'description'=>t('Edited user details'),  
+    	        'page callback' => 'edit_user_details',
+        	'access callback' => TRUE,
+                'type' => MENU_NORMAL_ITEM, 
+                
+  	);
+        
+        
+        return $items;
+}
+
+function edit_user_details(){
+    
+    $uid = arg(2);
+    $user_det = array();
+    $user_details = user_load($uid);
+    
+    $user_det['org'] = $user_details->field_organization['und'][0]['nid'];
+    return drupal_json_output($user_det);
+    
+}
+
+
+
+function edit_event_details(){
+    
+    $nid = arg(2);
+    $node_details = array();
+    $details = node_load($nid);
+    
+    $node_details['subcat'] = $details->field_event_subcategory['und'][0]['nid'];
+    $node_details['org'] = $details->field_event_organization['und'][0]['nid'];
+    //print_r($node_details);
+    return drupal_json_output($node_details);
+    
+}
+
+function add_event_subcat_listing(){
+    
+    $cat = arg(2);
+    $subcat_list = array();
+
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_parent_category} as c
+inner join node as n on n.nid = c.entity_id
+where c.field_parent_category_value = :city AND n.status = :status ORDER BY n.title ASC", array(':city' => $cat,':status' => 1));
+
+
+    $subcat_list['_none'] = t('-None-');
+
+    foreach ($select as $node) {
+            $subcat_list[$node->nid] = $node->title;
+    }
+    
+    //return $subcat_list;
+    return drupal_json_output($subcat_list);
+    
+}
+
+function manage_event_subcat_listing(){
+    
+    $cat = arg(2);
+    $subcat_list = array();
+
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_parent_category} as c
+inner join node as n on n.nid = c.entity_id
+where c.field_parent_category_value = :city AND n.status = :status ORDER BY title ASC", array(':city' => $cat,':status' => 1));
+
+
+    $subcat_list['All'] = t('All');
+
+    foreach ($select as $node) {
+            $subcat_list[$node->nid] = $node->title;
+    }
+    
+    //return $subcat_list;
+    return drupal_json_output($subcat_list);
+    //print_r($subcat_list);
+    
+}
+
+function manage_event_org_listing(){
+    
+  $event_city = arg(2);  
+  $all_event_org = array();
+
+  $all_event_org['All'] = t('All');
+  
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_organization_city} as c
+inner join node as n on n.nid = c.entity_id where field_organization_city_nid = :city AND n.status = :status ORDER BY n.title DESC", array(':city' => $event_city,':status' => 1));
+
+    foreach ($select as $no) {
+            $all_event_org[$no->nid] = $no->title;
+    }
+    
+    return drupal_json_output($all_event_org);
+    //print_r($all_event_org);
+    
+}
+
+function adder(){
+   
+  $event_city = arg(2);  
+  $all_event_org = array();
+
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_organization_city} as c
+inner join node as n on n.nid = c.entity_id where field_organization_city_nid = :city AND n.status = :status", array(':city' => $event_city,':status' => 1));
+
+    foreach ($select as $no) {
+            $all_event_org[$no->nid] = $no->title;
+    }
+    
+    $all_event_org['_none'] = t('- None -');
+
+    return drupal_json_output($all_event_org);
+    //print_r($all_event_org);
+    
+}
+
+function organization_lists_responce($id){ 
+   
+  $city = arg(2);  
+  $all_org = array();
+
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_organization_city} as c
+inner join node as n on n.nid = c.entity_id where field_organization_city_nid = :city AND n.status = :status", array(':city' => $city,':status' => 1));
+
+  
+
+
+    foreach ($select as $no) {
+            $all_org[$no->nid] = $no->title;
+    }
+    
+      $all_org['_none'] = t('- None -');
+    
+    //return $all_org;
+    return drupal_json_output($all_org);
+    //print_r($all_org);
+}
+
+function register_users_form_alter(&$form, $form_state, $form_id) {
+
+  //drupal_set_message('form id'.$form_id.'');
+  if($form_id != 'event_calendar_node_form'){  
+        if($form_state['view']->name == 'manage_events') {
+
+          $form['field_event_city_nid']['#options']['All'] = t('All');
+          $form['field_event_organization_nid']['#options']['All'] = t('All');
+          $form['field_event_category_value']['#options']['All'] = t('All');
+          $form['field_event_subcategory_nid']['#options']['All'] = t('All');
+          $form['status']['#options']['All'] = t('All');
+
+       }
+
+       if($form_state['view']->name == 'feedback_listing'){
+
+           $form['field_event_category_value']['#options']['All'] = t('All');
+           $form['field_event_subcategory_nid']['#options']['All'] = t('All');
+           $form['field_event_nid']['#options']['All'] = t('All');
+           $form['field_event_city_nid']['#options']['All'] = t('All');
+           $form['status']['#options']['All'] = t('All');
+       }
+}
+ 
+}
+
+//function register_users_form_alter(&$form, &$form_state, $form_id){    
+//    
+//    if($form_id == 'user_register_form3434'){    
+//        //drupal_set_message('form id is'.$form_id.'');
+////        $squadron_options = array();
+////
+////        if(isset($form['field_city']['und']['#default_value'][0])) {
+////            $city = $form['field_city']['und']['#default_value'][0];
+////        }
+////        else {
+////            $city = 0;
+////        }
+////
+////        $squadron_options = sappers_squadron_squadrons($city);
+////
+////        $form['field_city']['und']['#ajax'] = array(
+////            'event' => 'change',
+////            'wrapper' => 'squadron-wrapper',
+////            'callback' => 'sappers_squadron_ajax_callback',
+////            'method' => 'replace',
+////        );
+////
+////        $form['field_organization']['und']['#prefix'] = '<div id="squadron-wrapper">';
+////        $form['field_organization']['und']['#suffix'] = '</div>';
+////        $form['field_organization']['und']['#options'] = $squadron_options;
+////        
+////        $form['#submit'][] = 'my_submit_function';
+//    
+//    $city_list = user_city_list();
+//    $city_selected = isset($form_state['values']['city_user_dropdown']) ? $form_state['values']['city_user_dropdown'] : key($city_list);
+//    
+//    
+//    $form['city_user_dropdown'] = array(
+//    '#type' => 'select',
+//    '#title' => 'new City',
+//    '#options' => $city_list,
+//    '#weight' => 2,
+//    //'#default_value' => isset($_REQUEST['city_event_dropdown']) ? $_REQUEST['city_event_dropdown'] : '',
+//    //'#required' => TRUE,
+//    '#ajax' => array(
+//      'callback' => 'city_user_dropdown_callback',
+//      'wrapper' => 'user-dashboard-dropdown-second-replace',
+////      'event' => 'change',
+////      'method' => 'replace',
+////      'effect' => 'fade',
+////      'prevent'=> 'sumbit',
+//    ),
+//  );
+//    
+//    
+//   $form['organization_user_dropdown'] = array(
+//    '#type' => 'select',
+//    '#title' => 'new Organization',
+//    '#weight' => 3,
+//    //'#required' => TRUE, 
+//    '#prefix' => '<div id="user-dashboard-dropdown-second-replace">',
+//    '#suffix' => '</div>',
+//    '#options' => sappers_squadron_squadrons($city_selected),
+//    //'#default_value' => isset($form_state['values']['dropdown_second']) ? $form_state['values']['dropdown_second'] : $event_node->field_event_subcategory['und'][0]['value'],
+//    //'#default_value' => isset($_REQUEST['organization_event_dropdown']) ? $_REQUEST['organization_event_dropdown'] : '',
+//  );  
+//        
+//   return $form; 
+//   }
+//}
+
+//function _build_element_readonly($element, &$form_state) {  
+//    //$element['value']['#attributes']['readonly'] = 'readonly';
+//     //$form['field_event_city']['#disabled'] = TRUE;
+//     return $element;
+//}
+
+function user_city_list(){
+    
+     $city_lists = array();
+
+$select = db_query("SELECT n.title as title,n.nid as nid from {node} as n  where n.type = :type AND n.status = :status", array(':type' => 'city',':status' => 1));
+
+
+    $city_lists['Select'] = t('Select');
+
+
+    foreach ($select as $node) {
+            $city_lists[$node->nid] = $node->title;
+    }
+    
+    return $city_lists;
+}
+
+function city_user_dropdown_callback($form, $form_state){
+    
+    return $form['organization_user_dropdown'];
+    
+}
+
+
+function sappers_squadron_squadrons($city){
+    $all_org = array();
+
+
+$select = db_query("SELECT c.entity_id as eid,n.nid as nid,n.title as title FROM {field_data_field_organization_city} as c
+inner join node as n on n.nid = c.entity_id where field_organization_city_nid = :city AND n.status = :status", array(':city' => $city,':status' => 1));
+
+    $all_org['_none'] = t('- None -');
+
+
+    foreach ($select as $node) {
+            $all_org[$node->nid] = $node->title;
+    }
+    
+    return $all_org;
+}
+
+
+function my_submit_function($form, &$form_state){
+  // The value submitted to your #ajax form element
+  // is part of the $form_state['values'] array. You can
+  // take care of saving it to the database or whatever, here.
+    
+    //drupal_set_message('<pre>'.print_r($form_state['values'],TRUE).'</pre>');
+    $user_ids = $form_state['values']['uid'];
+    $city = $form_state['input']['field_city']['und'];
+    $organization = $form_state['input']['field_organization']['und'];
+    
+    //drupal_set_message('<pre>'.print_r($form_state['input']['field_organization']['und'], TRUE).'</pre>');
+    
+    //drupal_set_message('<pre>'.print_r($form_state['input']['field_city']['und'], TRUE).'</pre>');
+    
+    
+    $existing = user_load($user_ids);
+    $edit = (array) $existing;
+    $edit['field_organization']['und'][0]['nid'] = $organization;
+    user_save($existing, $edit);
+    
+}
+
+

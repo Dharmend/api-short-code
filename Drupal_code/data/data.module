@@ -1,0 +1,444 @@
+<?php
+
+function data_menu() {
+
+  $items = array();
+  $items['data/import'] = array(
+    'title' => 'Upload Data Page',
+    'page callback' => 'drupal_get_form', //drupal_get_form
+    'page arguments' => array('create_event_form'),
+    'access arguments' => array('import excel file'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  return $items;
+}
+
+
+function data_permission() {
+  return array(
+    'import excel file' => array(
+      'title' => t('Import event excel file'),
+      'description' => t('Import live event'),
+    ),
+  );
+}
+
+
+
+function create_event_form($form, &$form_state){
+    
+ 
+  $form['picture']['profile'] = array(
+    '#type' => 'file',
+    '#weight' => 1,
+    '#description' => t('Only xlsx file are allowed.'),  
+    //'#element_validate' => array('validate_security_check'),
+    '#title' => t('Upload Artist Form')
+  );
+  
+  $form['picture']['snap'] = array(
+    '#type' => 'file',
+    '#weight' => 2,
+    '#description' => t('Only JPEG, PNG and GIF images are allowed.'), 
+    '#title' => t('Upload Artist Image')
+  );
+  
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#weight' => 11,  
+    '#value' => t('Submit'),
+  );
+  
+  $form['#attributes']['enctype'] = "multipart/form-data";
+
+  return $form;
+}
+
+function create_event_form_validate($form, &$form_state){
+	
+ $file = file_save_upload('profile', array(
+      'file_validate_extensions' => array('xlsx'),
+  ));
+
+if ($file) {
+    if ($file = file_move($file, 'public://excel/')) {
+      $form_state['values']['profile'] = $file;
+    }
+    else {
+      form_set_error('profile', t('Failed to write the uploaded file the site\'s file folder.'));
+    }
+  }
+  else {
+    form_set_error('profile', t('No file was uploaded.'));
+  }
+  
+  // upload snap to the server
+  
+  
+  $snap_file = file_save_upload('snap', array(
+      'file_validate_is_image' => array(),
+      'file_validate_extensions' => array('png gif jpg jpeg'),
+  ));
+  
+  
+  if (!empty($snap_file)) {
+    if ($snap_file = file_move($snap_file, 'public://')) {
+      $form_state['values']['snap'] = $snap_file;
+    }
+    else {
+      form_set_error('snap', t('Failed to write the uploaded file the site\'s file folder.'));
+    }
+  }
+  else {
+    form_set_error('snap', t('No file was uploaded.'));
+  }
+  
+  //drupal_set_message('<pre>'.print_r($snap_file,TRUE).'</pre>');
+ 	
+} 
+
+
+function create_event_form_submit($form, &$form_state){
+ global $user;
+ $excel_file = $form_state['values']['profile'];
+ $snap_image = $form_state['values']['snap'];
+//drupal_set_message('<pre> snap form submit value'.print_r($form_state['values']['snap'],TRUE).'</pre>');
+
+    
+ module_load_include('inc', 'phpexcel');
+
+
+ $excel_fname = $form_state['values']['profile']->uri;
+
+  $snap_file = $form_state['values']['snap']->uri;
+  //$snap_file->status = FILE_STATUS_PERMANENT;
+  //file_save($snap_file);
+  //file_create_url($snap_file);
+  //drupal_set_message('<pre>'.print_r($snap_file,true).'</pre>');
+  
+  
+
+
+$aa = explode("/",$excel_fname);
+echo $aa[3];
+$count_total = array();
+
+$path = 'sites/default/files/excel/'.$aa[3];
+//$path = 'sites/default/files/excel/12validated12.xlsx';
+  
+  $result = phpexcel_import($path);
+  if (is_array($result)) {
+     //save data in database
+ 
+  //drupal_set_message('<pre>'.print_r($result,TRUE).'</pre>');
+
+ 
+    foreach ($result[1] as $rec){
+                    //drupal_set_message('<pre>'.print_r($rec,TRUE).'</pre>');
+                    if($rec['Email - ID'] != ''){
+	            //drupal_set_message('date of birth'.$rec['Date of Birth(d-m-y)'].'');
+                            $nd_mailid = $rec['Email - ID'];
+            
+                            $query = db_select('field_data_field_email', 'u');
+                            $query->fields('u', array('entity_id', 'language','field_email_email'))
+                                  ->condition('u.field_email_email', $nd_mailid);
+                            $result = $query->execute()->fetchAssoc();
+                            
+                             if(!empty($result)){
+                                 $existed_nid = $result['entity_id'];
+                                 $node = node_load($existed_nid);
+                                 
+                                   $node->title    = isset($rec['Name of Art Form -Cultural Practice']) ? $rec['Name of Art Form -Cultural Practice'] : '';
+  $node->language = LANGUAGE_NONE;
+  $body_text = '';
+  $node->body[$node->language][0]['value']   = $body_text;
+  $node->body[$node->language][0]['summary'] = text_summary($body_text);
+  $node->body[$node->language][0]['format']  = 'filtered_html';
+  
+/* Add/assign Categeories */
+  
+ $cat = $rec['Category'];
+
+if($cat == 'VisualArt'){
+	$voc_cat = 2;
+}elseif($cat == 'PerformingArt'){
+	$voc_cat = 3;
+}elseif($cat == 'LiteraryForm'){
+	$voc_cat = 4;
+}else{
+	
+}
+
+$cat = array();
+
+if(!empty($rec['Sub Catgeory'])){
+    
+     $cat_tid = get_term_id_voc($rec['Sub Catgeory'],$voc_cat);
+     if(!empty($cat_tid)){
+         $cat[]['tid'] = $cat_tid; 
+     }
+     
+}
+if(!empty($rec['Sub - Sub - Catgeory'])){
+    
+     $subcat_tid = get_term_id_voc($rec['Sub - Sub - Catgeory'],$voc_cat);
+     if(!empty($subcat_tid)){
+         $cat[]['tid'] = $subcat_tid; 
+     }
+     
+    
+}
+if(!empty($rec['Sub - Sub - Sub - Catgeory'])){
+    
+     $sub_sub_cat_tid = get_term_id_voc($rec['Sub - Sub - Sub - Catgeory'],$voc_cat);
+     if(!empty($sub_sub_cat_tid)){
+        $cat[]['tid'] = $sub_sub_cat_tid; 
+     }  
+}
+
+$new_cat = array_filter($cat);
+//art form
+
+if(!empty($rec['Art Form'])){
+        $artfrm_tid = get_term_id_voc($rec['Art Form'],5);
+                if(!empty($artfrm_tid)){
+                $trm_tid = $artfrm_tid; 
+             }         
+ }
+
+
+//drupal_set_message('art form tid'.$trm_tid.'');
+$node->field_profile_image[$node->language][0] = (array) $snap_image;  
+$node->field_name[$node->language][0]['value'] = $rec['Artist Name'];
+$node->field_father_s_name[$node->language][0]['value'] = $rec['Father\'s Name'];
+//$node->field_date_of_birth['und'][0]['value'] = format_date(strtotime($rec['field_date_of_birth']), 'custom', 'm-d-Y');
+//$node->field_visual_art['und'] = array(array('tid' => 3),array('tid' => 11),array('tid' => 15));
+
+// update cat values
+
+if($voc_cat == '2'){
+        $new_cat1 = array_merge($node->field_visual_art['und'],$new_cat);
+	$node->field_visual_art['und'] = $new_cat1;
+        //drupal_set_message('VisualArt');
+}elseif($voc_cat == '3'){
+        $new_cat2 = array_merge($node->field_performing_art['und'],$new_cat);
+	$node->field_performing_art['und'] = $new_cat2;
+        //drupal_set_message('PerformingArt');
+}elseif($voc_cat == '4'){
+	$new_cat3 = array_merge($node->field_literary_form['und'],$new_cat);
+        $node->field_literary_form['und'] = $new_cat3;
+        //drupal_set_message('LiteraryForm');
+}else{
+	
+}
+
+//$node->field_performing_art['und'] = $new_cat;
+//$node->field_literary_form['und'] = $new_cat;
+$node->field_address1['und'][0]['value'] = $rec['Address - 1'];
+$node->field_address2['und'][0]['value'] = $rec['Address - 2'];
+
+$node->field_state['und'][0]['value'] = $rec['State'];
+$node->field_district['und'][0]['value'] = $rec['District'];
+$node->field_pin_code['und'][0]['value'] = $rec['Pin Code'];
+$node->field_telephone_no_['und'][0]['value'] = $rec['Telephone No.'];
+$node->field_email['und'][0]['email'] = $rec['Email - ID'];
+$node->field_adhar_no_['und'][0]['value'] = $rec['Adhar No.'];
+
+$node->field_bank_account['und'][0]['value'] = $rec['Bank Ac/No.'];
+$node->field_ifsc_code['und'][0]['value'] = $rec['IFSC - code'];
+$node->field_name['und'][0]['value'] = $rec['Artist Name'];
+$node->field_gender['und'][0]['value'] = isset($rec['Gender']) ? $rec['Gender'] : 'Male';
+$node->field_art_form['und'][0]['tid'] = $trm_tid;
+$node->field_adhar_card_linked_bank['und'][0]['value'] = isset($rec['Adhar card linked bank']) ? $rec['Adhar card linked bank'] : '';
+
+$node->field_bank_name['und'][0]['value'] = isset($rec['Bank Name']) ? $rec['Bank Name'] : '';
+$node->field_branch['und'][0]['value'] = isset($rec['Branch']) ? $rec['Branch'] : '';
+$node->field_mobile_no_['und'][0]['value'] = isset($rec['Mobile No.']) ? $rec['Mobile No.'] : '';
+
+
+/* Add Signature*/
+
+//$node->field_sig_name['und'][0]['value'] = isset($rec['Mobile No.']) ? $rec['Mobile No.'] : '';
+  
+  $path = 'artist/' . $rec['Artist Name'];
+  $node->path = array('alias' => $path);
+  
+  node_save($node);
+                                 
+     }else {
+         
+    
+           $node = new stdClass();
+  $node->type = 'artist_detail';
+  node_object_prepare($node);
+
+  $node->title    = $rec['Name of Art Form -Cultural Practice'];
+  $node->language = LANGUAGE_NONE;
+  $body_text = '';
+  $node->body[$node->language][0]['value']   = $body_text;
+  $node->body[$node->language][0]['summary'] = text_summary($body_text);
+  $node->body[$node->language][0]['format']  = 'filtered_html';
+  
+/* Add/assign Categeories */
+  
+ $cat = $rec['Category'];
+
+if($cat == 'VisualArt'){
+	$voc_cat = 2;
+}elseif($cat == 'PerformingArt'){
+	$voc_cat = 3;
+}elseif($cat == 'LiteraryForm'){
+	$voc_cat = 4;
+}else{
+	
+}
+
+$cat = array();
+
+if(!empty($rec['Sub Catgeory'])){
+    
+     $cat_tid = get_term_id_voc($rec['Sub Catgeory'],$voc_cat);
+     if(!empty($cat_tid)){
+         $cat[]['tid'] = $cat_tid; 
+     }
+     
+}
+if(!empty($rec['Sub - Sub - Catgeory'])){
+    
+     $subcat_tid = get_term_id_voc($rec['Sub - Sub - Catgeory'],$voc_cat);
+     if(!empty($subcat_tid)){
+         $cat[]['tid'] = $subcat_tid; 
+     }
+     
+    
+}
+if(!empty($rec['Sub - Sub - Sub - Catgeory'])){
+    
+     $sub_sub_cat_tid = get_term_id_voc($rec['Sub - Sub - Sub - Catgeory'],$voc_cat);
+     if(!empty($sub_sub_cat_tid)){
+        $cat[]['tid'] = $sub_sub_cat_tid; 
+     }  
+}
+
+$new_cat = array_filter($cat);
+//art form
+
+if(!empty($rec['Art Form'])){
+        $artfrm_tid = get_term_id_voc($rec['Art Form'],5);
+                if(!empty($artfrm_tid)){
+                $trm_tid = $artfrm_tid; 
+             }         
+ }
+
+
+//drupal_set_message('art form tid'.$trm_tid.'');
+$node->field_profile_image[$node->language][0] = (array) $snap_image;  
+$node->field_name[$node->language][0]['value'] = $rec['Artist Name'];
+$node->field_father_s_name[$node->language][0]['value'] = $rec['Father\'s Name'];
+//$node->field_date_of_birth['und'][0]['value'] = format_date(strtotime($rec['field_date_of_birth']), 'custom', 'm-d-Y');
+//$node->field_visual_art['und'] = array(array('tid' => 3),array('tid' => 11),array('tid' => 15));
+
+if($voc_cat == '2'){
+	$node->field_visual_art['und'] = $new_cat;
+        //drupal_set_message('VisualArt');
+}elseif($voc_cat == '3'){
+	$node->field_performing_art['und'] = $new_cat;
+        //drupal_set_message('PerformingArt');
+}elseif($voc_cat == '4'){
+	$node->field_literary_form['und'] = $new_cat;
+        //drupal_set_message('LiteraryForm');
+}else{
+	
+}
+
+//$node->field_performing_art['und'] = $new_cat;
+//$node->field_literary_form['und'] = $new_cat;
+$node->field_address1['und'][0]['value'] = $rec['Address - 1'];
+$node->field_address2['und'][0]['value'] = $rec['Address - 2'];
+
+$node->field_state['und'][0]['value'] = $rec['State'];
+$node->field_district['und'][0]['value'] = $rec['District'];
+$node->field_pin_code['und'][0]['value'] = $rec['Pin Code'];
+$node->field_telephone_no_['und'][0]['value'] = $rec['Telephone No.'];
+$node->field_email['und'][0]['email'] = $rec['Email - ID'];
+$node->field_adhar_no_['und'][0]['value'] = $rec['Adhar No.'];
+
+$node->field_bank_account['und'][0]['value'] = $rec['Bank Ac/No.'];
+$node->field_ifsc_code['und'][0]['value'] = $rec['IFSC - code'];
+$node->field_name['und'][0]['value'] = $rec['Artist Name'];
+$node->field_gender['und'][0]['value'] = isset($rec['Gender']) ? $rec['Gender'] : 'Male';
+$node->field_art_form['und'][0]['tid'] = $trm_tid;
+$node->field_adhar_card_linked_bank['und'][0]['value'] = isset($rec['Adhar card linked bank']) ? $rec['Adhar card linked bank'] : '';
+
+$node->field_bank_name['und'][0]['value'] = isset($rec['Bank Name']) ? $rec['Bank Name'] : '';
+$node->field_branch['und'][0]['value'] = isset($rec['Branch']) ? $rec['Branch'] : '';
+$node->field_mobile_no_['und'][0]['value'] = isset($rec['Mobile No.']) ? $rec['Mobile No.'] : '';
+
+
+/* Add Signature*/
+
+//$node->field_sig_name['und'][0]['value'] = isset($rec['Mobile No.']) ? $rec['Mobile No.'] : '';
+  
+  $path = 'artist/' . $rec['Artist Name'];
+  $node->path = array('alias' => $path);
+  
+  node_save($node);
+  
+   }
+           }else{
+                       drupal_set_message('Artist Data Not found.');
+                    }
+    }
+    
+    drupal_set_message('Artist has been added successfully.');
+  }
+  
+  else {
+    drupal_set_message(t("Oops ! An error occured !"), 'error');
+  }
+  
+  
+  // upload file to the server
+  
+ }
+ 
+ 
+ function get_term_id_voc($t_desc,$vid){
+
+$query = new EntityFieldQuery;
+$result = $query
+  ->entityCondition('entity_type', 'taxonomy_term')
+  ->propertyCondition('description', $t_desc)
+  ->propertyCondition('vid', $vid)
+  ->execute();
+
+		foreach($result as $tr){
+			
+			foreach($tr as $t){
+				$term_id =  $t->tid;
+			}
+			
+		} 
+		
+		return $term_id;
+}
+ 
+ 
+ function update_user_and_profile($rec){
+	 
+	 
+ }
+ 
+ function create_user_and_profile($rec){
+
+	 
+	 
+	 
+ }
+ 
+ 
+ 
+ 
+ 

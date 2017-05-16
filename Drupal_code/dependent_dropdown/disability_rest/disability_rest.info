@@ -1,0 +1,8 @@
+;$Id$
+
+name = Disibility Rest Services
+description = A Disibility Rest Services module.
+package = Map Custom Modules
+core = 7.x
+package = customs
+files[] = disability_rest.module

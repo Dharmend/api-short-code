@@ -1,0 +1,16 @@
+To used web services in Drupal we need 
+->Service Module
+
+Steps to used web services in drupal 7 to perform retrieve,create,,update and delete Operation.
+
+Step1) Enable service Module (admin -> modules),in the service Module enable "REST Server" Module.
+
+Step2)Configured Service module go to (admin > structure > services) and configured with following screen shot
+(Refer ServeceConf.png ,datatype.png ,  Resource)
+
+Step 3)Create Module for creating rest full services for custom functionality we need following hook 
+         ->hook_permission()
+        ->hook_services_resources()
+Refere Module for more details
+
+Step 4)To test restful services,Download "POSTER" as add on in Firefox please refer document

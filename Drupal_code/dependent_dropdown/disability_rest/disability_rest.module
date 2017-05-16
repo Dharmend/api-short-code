@@ -1,0 +1,202 @@
+<?php
+/**
+ * Implements hook_perm().
+ */
+function disability_rest_permission() {
+  return array(
+    'disability rest customization module' => array(
+      'title' => t('disability rest Customization module'),
+      'description' => t('Perform administration tasks for disability rest.'),
+    ),
+  );
+}
+/**
+* Implements of hook_services_resources().
+*/
+function disability_rest_services_resources() {
+  $api = array(
+    'registerdevice' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Create location',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'register_update_devices',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'location',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'The location data to create',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+	
+		
+      ),
+    ),
+      
+    'cities' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'City Listing',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'city_listing',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'city',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'The city listing data',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+	
+		
+      ),
+    ),
+      
+    'eventsubcategory' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Sub category lising of the event',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'eventsubcategory_listing',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'subcategory',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'The subcategory Listing of the event',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+	
+		
+      ),
+    ), 
+      
+     'eventlist' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Event Listing and filteration',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'event_listing',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'eventlist',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'The Event Listing',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+	
+		
+      ),
+    ),
+      
+    
+    'eventdetail' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Event detail descriptions',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'event_details',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'eventdetail',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'The Event detail descriptions',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+	
+		
+      ),
+    ),
+      
+    'postcomment' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Post comment on events',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'post_comments',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'postcomments',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'Post comment on event',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+      ),
+    ),
+      
+    'commentlist' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Comment list with in events',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'comment_lists',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'commentlist',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'Comment list on events',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+      ),
+    ),
+      
+    'addtofavorite' => array(
+      'operations' => array(
+       	'create' => array(
+        'help' => 'Add Event as a favourites',
+	'file' => array('type' => 'inc', 'module' => 'disability_rest', 'name' => 'resource/location_resource'),
+        'callback' => 'add_to_fav',
+	'access arguments' => array('disability rest customization module'),
+        'access arguments append' => FALSE,
+        'args' => array(
+            array(
+              'name' => 'addtofav',
+              'optional' => FALSE,
+              'source' => 'data',
+              'description' => 'Add to favourites',
+              'type' => 'array',
+            ),	
+          ),
+        ),
+      ),
+    ),
+      
+      
+  );
+  return $api;
+}
+?>
+
